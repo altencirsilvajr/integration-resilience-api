@@ -6,6 +6,10 @@
     <ProjectReference Include="..\IntegrationResilience.Infrastructure\IntegrationResilience.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Polly.Core" Version="8.6.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>

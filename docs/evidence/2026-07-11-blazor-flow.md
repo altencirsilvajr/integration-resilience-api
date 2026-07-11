@@ -1,0 +1,39 @@
+# Blazor flow evidence — 2026-07-11
+
+## Environment
+
+The local fake provider ran at `http://localhost:5307`, API at
+`http://localhost:5306`, and dashboard at `http://localhost:5406`.
+
+## Automated browser route
+
+Playwright CLI drove the real dashboard (no mocked browser/API route):
+
+1. Opened the dashboard and confirmed the study guide and five scenario buttons.
+2. Clicked **1. Seed success**: the API card reported HTTP 200,
+   `source:"provider"`, and a real correlation id.
+3. Clicked **2. Trigger 503**: the API card reported HTTP 200 with
+   `source:"fallback"`, `fallbackAgeSeconds`, and
+   `providerFailureClass:"circuit-open"`.
+4. The timeline card showed two HTTP 503 attempts, exponential retry delays of
+   120 ms and 240 ms, and a circuit-open event.
+5. Clicked **5. Wait and recover** in the same real flow: the following provider
+   probe returned HTTP 200 and the circuit became `Closed`.
+
+The browser console was checked after the final dashboard build: 0 errors and 0
+warnings. Screenshot: [fallback and circuit timeline](images/2026-07-11-blazor-flow.png).
+
+## Test evidence
+
+`dotnet test IntegrationResilience.sln --no-build --no-restore --logger
+"console;verbosity=minimal"` passed 4 tests: 2 domain/application behavior tests
+and 2 API/governance tests, including `WebApplicationFactory` HTTP health coverage.
+
+## Docker Compose attempt
+
+`docker --version` and `docker compose version` succeeded (Docker 29.5.3 / Compose
+v5.1.4). `docker compose up --build -d` and subsequent `docker compose ps` calls
+did not return a result in this shared desktop session, so no container state is
+claimed here. The real provider/API/dashboard flow above was instead verified as
+local host processes. The supplied `docker-compose.yml` remains the reproducible
+three-component topology with ports 5307, 5306, and 5406.
