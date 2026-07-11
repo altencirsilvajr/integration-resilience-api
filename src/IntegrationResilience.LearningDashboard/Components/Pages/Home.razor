@@ -1,0 +1,43 @@
+@page "/"
+@rendermode InteractiveServer
+@inject LabApiClient Api
+
+<PageTitle>Resilience Learning Dashboard</PageTitle>
+
+<main>
+    <p class="eyebrow">LOCAL LEARNING DASHBOARD · ADR-0005</p>
+    <h1>Integration resilience, made visible.</h1>
+    <p class="lede">This is not a product UI. Each action makes a real request through the API to the local fake provider and exposes its observable result.</p>
+    <section class="guide" aria-label="Study guide"><strong>Suggested route:</strong> seed a success → trigger 503 or timeout → inspect retries and the open circuit → wait 6 seconds and recover.</section>
+    <section class="actions" aria-label="Scenarios">
+        <button @onclick='() => RunAsync("success")'>1. Seed success</button>
+        <button @onclick='() => RunAsync("server-error")'>2. Trigger 503</button>
+        <button @onclick='() => RunAsync("timeout")'>3. Trigger timeout</button>
+        <button @onclick='() => RunAsync("rate-limit")'>4. Trigger 429</button>
+        <button class="recovery" @onclick="RecoverAsync">5. Wait and recover</button>
+    </section>
+    @if (busy) { <p class="running" aria-live="polite">Executing the real API flow…</p> }
+    @if (result is not null)
+    {
+        <section class="grid" aria-live="polite">
+            <article class="card"><p class="label">LAST API RESPONSE</p><h2>HTTP @result.StatusCode</h2><p>Correlation: <code>@correlationId</code></p><pre>@result.Body</pre></article>
+            <article class="card"><p class="label">CIRCUIT + TIMELINE</p><pre>@state</pre></article>
+        </section>
+    }
+    <section class="notes"><h2>What this demonstrates</h2><ul><li>Retries are bounded; each provider call has a timeout.</li><li>Fallback is labelled <code>"source":"fallback"</code> and includes its age.</li><li>Without fallback, the response is a ProblemDetails failure with correlation and failure class.</li></ul></section>
+</main>
+
+@code {
+    private LabCallResult? result;
+    private string? state;
+    private string correlationId = "not-run";
+    private bool busy;
+    private async Task RunAsync(string scenario)
+    {
+        busy = true; correlationId = Guid.NewGuid().ToString("N");
+        try { result = await Api.RunAsync(scenario, correlationId); state = await Api.GetStateAsync(correlationId); }
+        catch (Exception exception) { result = new LabCallResult(0, $"Dashboard could not reach API: {exception.Message}"); state = "No state could be loaded."; }
+        finally { busy = false; }
+    }
+    private async Task RecoverAsync() { busy = true; await Task.Delay(TimeSpan.FromSeconds(6)); busy = false; await RunAsync("success"); }
+}

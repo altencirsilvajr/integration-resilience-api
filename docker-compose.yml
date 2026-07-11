@@ -1,0 +1,29 @@
+services:
+  fake-provider:
+    build:
+      context: .
+      dockerfile: Dockerfile.provider
+    ports:
+      - "5307:8080"
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      Provider__BaseUrl: http://fake-provider:8080/
+    depends_on:
+      fake-provider:
+        condition: service_started
+    ports:
+      - "5306:8080"
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    environment:
+      Api__BaseUrl: http://api:8080/
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "5406:8080"
