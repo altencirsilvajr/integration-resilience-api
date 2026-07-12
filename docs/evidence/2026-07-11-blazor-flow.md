@@ -29,11 +29,20 @@ warnings. Screenshot: [fallback and circuit timeline](images/2026-07-11-blazor-f
 "console;verbosity=minimal"` passed 4 tests: 2 domain/application behavior tests
 and 2 API/governance tests, including `WebApplicationFactory` HTTP health coverage.
 
-## Docker Compose attempt
+## Docker Compose validation (repeated successfully)
 
-`docker --version` and `docker compose version` succeeded (Docker 29.5.3 / Compose
-v5.1.4). `docker compose up --build -d` and subsequent `docker compose ps` calls
-did not return a result in this shared desktop session, so no container state is
-claimed here. The real provider/API/dashboard flow above was instead verified as
-local host processes. The supplied `docker-compose.yml` remains the reproducible
-three-component topology with ports 5307, 5306, and 5406.
+The retry on 2026-07-12 completed with Docker 29.5.3 / Compose v5.1.4:
+
+- `docker compose up --build -d` built and started `fake-provider`, `api`, and
+  `dashboard`; `docker compose ps` reported all three as `Up` on 5307, 5306, and
+  5406 respectively.
+- Containerized `GET /health` returned HTTP 200.
+- A containerized provider lookup returned `source:"provider"`; a configured
+  503 then returned an explicitly marked fallback with `circuit-open` and the
+  timeline named the internal target `http://fake-provider:8080/...`.
+- Playwright clicked Seed success, Trigger 503, and Wait and recover against the
+  Docker-served dashboard. It observed provider → fallback/open circuit →
+  provider/closed circuit using real API calls.
+
+The sole browser console error was the browser's automatic request for a missing
+`/favicon.ico`; it did not affect the dashboard flow.
